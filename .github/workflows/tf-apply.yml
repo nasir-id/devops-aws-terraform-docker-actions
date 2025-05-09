@@ -1,0 +1,92 @@
+name: 'Terraform Apply'
+
+on:
+  push:
+    branches:
+      - main  # Only run when changes are merged to main branch
+    paths:
+      - 'terraform/services/**.tf'  # Any Terraform file in the services directory
+      - 'terraform/services/**.tfvars'  # Any Terraform vars file in the services directory
+      - '.github/workflows/apply.yml'
+
+env:
+  TF_VERSION: '1.5.7'  # Specify Terraform version
+  AWS_REGION: 'ap-southeast-1'  # Update with your AWS region
+
+jobs:
+  detect-changed-dirs:
+    name: Detect Changed Directories
+    runs-on: ubuntu-latest
+    outputs:
+      dirs: ${{ steps.find-dirs.outputs.dirs }}
+      
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all history to properly detect changes
+
+      - name: Find Changed Terraform Directories
+        id: find-dirs
+        run: |
+          # Get the commit before the push to main
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^terraform/services/.*\.(tf|tfvars)$' || echo "")
+          
+          # For regular events with changes
+          if [ -n "$CHANGED_FILES" ]; then
+            DIRS=$(echo "$CHANGED_FILES" | xargs dirname | sort -u | jq -R -s -c 'split("\n")[:-1]')
+          # No changes detected
+          else
+            DIRS="[]"
+          fi
+          
+          echo "dirs=$DIRS" >> $GITHUB_OUTPUT
+          echo "Changed directories: $DIRS"
+
+  terraform-apply:
+    name: Terraform Apply
+    needs: detect-changed-dirs
+    if: ${{ needs.detect-changed-dirs.outputs.dirs != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        directory: ${{ fromJSON(needs.detect-changed-dirs.outputs.dirs) }}
+      fail-fast: false
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        working-directory: ${{ matrix.directory }}
+        run: terraform init
+
+      - name: Terraform Validate
+        working-directory: ${{ matrix.directory }}
+        run: terraform validate
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ${{ matrix.directory }}
+        run: terraform plan -no-color -out=tfplan
+      
+      - name: Terraform Apply
+        id: apply
+        working-directory: ${{ matrix.directory }}
+        run: terraform apply -auto-approve tfplan
+        
+      - name: Terraform Apply Status
+        if: steps.apply.outcome == 'failure'
+        run: exit 1
