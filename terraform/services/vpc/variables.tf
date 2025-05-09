@@ -1,7 +1,11 @@
+variable "region" {
+  description = "The AWS region where the resources will be created"
+  type        = string
+}
+
 variable "name" {
   description = "Name to be used on all the resources as identifier"
   type        = string
-  default     = ""
 }
 
 variable "cidr" {
