@@ -12,7 +12,7 @@ on:
       - '**'
     paths:
       - 'terraform/services/**.tf'  # Any Terraform file in any subdirectory
-      - 'services/**.tfvars'  # Any Terraform state file in any subdirectory
+      - 'terraform/services/**.tfvars'  # Any Terraform state file in any subdirectory
       - '.github/workflows/plan.yml'
     types: [opened, synchronize, reopened]
 
