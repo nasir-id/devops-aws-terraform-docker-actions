@@ -17,3 +17,8 @@ output "default_security_group_id" {
   description = "The ID of the security group created by default on VPC creation"
   value       = aws_vpc.this.default_security_group_id
 }
+
+output "igw_id" {
+  description = "The ID of the Internet Gateway"
+  value       = aws_internet_gateway.igw.id
+}
