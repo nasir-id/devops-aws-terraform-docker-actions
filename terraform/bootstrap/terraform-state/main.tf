@@ -3,5 +3,4 @@ resource "aws_s3_bucket" "terraform_state" {
 
   force_destroy       = true
   object_lock_enabled = false
-  # tags                = "terraform-state"
 }

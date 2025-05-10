@@ -14,5 +14,3 @@ COPY app.py .
 COPY templates/clock.html templates/
 
 EXPOSE 5000
-
-# Run using gunicorn for production

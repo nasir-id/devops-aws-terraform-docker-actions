@@ -1,0 +1,46 @@
+name: Deploy Docker Image to EC2
+
+on:
+  push:
+    branches: [ '**' ]
+    paths:
+      - 'app/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'app/**'
+  # Enable manual trigger from GitHub Actions tab
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    - name: Login to DockerHub
+      run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+
+    # - name: Build and push Docker image
+    #   run: |
+    #     docker build -t clock-app .
+    #     docker tag clock-app kangnasir/clock-app:latest
+    #     docker push kangnasir/clock-app:latest
+
+    - name: Install SSH Key
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Deploy Docker image to EC2
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_INSTANCE_IP }} << 'EOF'
+        docker pull kangnasir/clock-app:latest
+        docker stop $(docker ps -a -q) || true
+        docker run -d -p 5000:5000 kangnasir/clock-app:latest
+        EOF
