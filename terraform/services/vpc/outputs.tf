@@ -19,6 +19,6 @@ output "default_security_group_id" {
 }
 
 output "igw_id" {
-  description = "The ID of the Internet Gateway"
+  description = "Internet Gateway ID"
   value       = aws_internet_gateway.igw.id
 }
