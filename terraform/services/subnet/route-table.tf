@@ -11,7 +11,6 @@ resource "aws_route_table" "public" {
  }
 }
 
-
 resource "aws_route_table_association" "public_subnet_asso" {
  subnet_id      = aws_subnet.subnet1.id
  route_table_id = aws_route_table.public.id
