@@ -12,7 +12,7 @@ on:
       - '**'
     paths:
       - 'terraform/services/**.tf'  # Any Terraform file in any subdirectory
-      - 'services/**.tfvars'  # Any Terraform state file in any subdirectory
+      - 'terraform/services/**.tfvars'  # Any Terraform state file in any subdirectory
       - '.github/workflows/plan.yml'
     types: [opened, synchronize, reopened]
 
@@ -36,22 +36,44 @@ jobs:
       - name: Find Changed Terraform Directories
         id: find-dirs
         run: |
-          # For PRs
+          # Handle different event types
           if [ "${{ github.event_name }}" == "pull_request" ]; then
-            CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -E '^terraform/services/.*\.(tf|tfvars)$' || echo "")
-          # For push events
+            echo "Processing Pull Request event"
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.sha }}"
+            
+            if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+              echo "Base SHA is empty or zero. Using all terraform files."
+              CHANGED_FILES=$(find terraform/services -type f -name "*.tf" -o -name "*.tfvars" | sort)
+            else
+              echo "Comparing $BASE_SHA with $HEAD_SHA"
+              CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -E '^terraform/services/.*\.(tf|tfvars)$' || echo "")
+            fi
+            
+          elif [ "${{ github.event_name }}" == "push" ]; then
+            echo "Processing Push event"
+            BEFORE_SHA="${{ github.event.before }}"
+            AFTER_SHA="${{ github.event.after }}"
+            
+            if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+              echo "Before SHA is empty or zero. Getting all committed files."
+              CHANGED_FILES=$(git ls-tree --name-only -r HEAD | grep -E '^terraform/services/.*\.(tf|tfvars)$' || echo "")
+            else
+              echo "Comparing $BEFORE_SHA with $AFTER_SHA"
+              CHANGED_FILES=$(git diff --name-only "$BEFORE_SHA" "$AFTER_SHA" | grep -E '^terraform/services/.*\.(tf|tfvars)$' || echo "")
+            fi
           else
-            CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | grep -E '^terraform/services/.*\.(tf|tfvars)$' || echo "")
+            echo "Processing other event type"
+            CHANGED_FILES=$(find terraform/services -type f -name "*.tf" -o -name "*.tfvars" | sort)
           fi
           
-          # If workflow_dispatch, consider all directories under services/
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            DIRS=$(find services/ -type f -name "*.tf" -o -name "*.tfvars" | xargs dirname | sort -u | sed 's/^\.\///' | jq -R -s -c 'split("\n")[:-1]')
-          # For regular events with changes
-          elif [ -n "$CHANGED_FILES" ]; then
-            DIRS=$(echo "$CHANGED_FILES" | xargs dirname | sort -u | jq -R -s -c 'split("\n")[:-1]')
-          # No changes detected
+          # Process the changed files to get directories
+          if [ -n "$CHANGED_FILES" ]; then
+            echo "Found changed files:"
+            echo "$CHANGED_FILES"
+            DIRS=$(echo "$CHANGED_FILES" | xargs -I{} dirname {} 2>/dev/null | sort -u | jq -R -s -c 'split("\n") | map(select(length > 0))' || echo "[]")
           else
+            echo "No changed terraform files detected"
             DIRS="[]"
           fi
           
