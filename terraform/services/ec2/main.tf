@@ -7,6 +7,7 @@ resource "aws_instance" "webapp_server" {
   vpc_security_group_ids = [aws_security_group.allow_http.id]
   iam_instance_profile   = aws_iam_instance_profile.webapp.name
   availability_zone           = "ap-southeast-1a"
+  user_data = file("user_data.sh")
   root_block_device {
       volume_size           = 50
       volume_type           = "gp3"
@@ -76,3 +77,4 @@ resource "aws_security_group" "allow_http" {
     Name = "allow_http"
   }
 }
+
