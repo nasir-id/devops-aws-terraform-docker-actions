@@ -23,7 +23,7 @@ jobs:
       # - name: Set up Docker Buildx
       #   uses: docker/setup-buildx-action@v2
 
-- name: Set up Docker Buildx
+      - name: Set up Docker Buildx
         run: |
           # Install dependencies if needed
           sudo apt-get update
