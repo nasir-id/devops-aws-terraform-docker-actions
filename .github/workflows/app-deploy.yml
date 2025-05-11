@@ -6,11 +6,11 @@ on:
       - main
     paths:
       - 'app/**'
-  # pull_request:
-  #   branches: [ main ]
-  #   paths:
-  #     - 'app/**'
-  # Enable manual trigger from GitHub Actions tab
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'app/**'
+  Enable manual trigger from GitHub Actions tab
   workflow_dispatch:
 
 jobs:
