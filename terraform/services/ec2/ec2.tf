@@ -12,6 +12,9 @@ resource "aws_instance" "webapp_server" {
       delete_on_termination = true
       encrypted             = true
   }
+  tags =  {
+    Name = "webapp-server"
+  }
 }
 
 
