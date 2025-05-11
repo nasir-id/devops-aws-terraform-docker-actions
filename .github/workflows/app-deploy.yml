@@ -1,41 +1,82 @@
-# name: Deploy Application to EC2
+name: Deploy Application to EC2
 
-# on:
-#   push:
-#     branches: 
-#       - main
-#     paths:
-#       - 'app/**'
-#   # pull_request:
-#   #   branches: [ main ]
-#   #   paths:
-#   #     - 'app/**'
-#   # Enable manual trigger from GitHub Actions tab
-#   workflow_dispatch:
+on:
+  push:
+    branches: 
+      - main
+    paths:
+      - 'app/**'
+  # pull_request:
+  #   branches: [ main ]
+  #   paths:
+  #     - 'app/**'
+  # Enable manual trigger from GitHub Actions tab
+  workflow_dispatch:
 
-# jobs:
-#   deploy:
-#     runs-on: ubuntu-latest
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
 
-#     steps:
-#     - name: Checkout repository
-#       uses: actions/checkout@v2
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
 #     - name: Set up Docker Buildx
 #       uses: docker/setup-buildx-action@v1
 
-#     - name: Login to DockerHub
-#       run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+      - name: Set up Docker Buildx
+        run: |
+          # Install dependencies if needed
+          sudo apt-get update
+          sudo apt-get install -y curl
+
+          # Create Docker config directory if it doesn't exist
+          mkdir -p ~/.docker/cli-plugins/
+
+          # Download Docker Buildx binary
+          curl -L "https://github.com/docker/buildx/releases/download/v0.10.4/buildx-v0.10.4.linux-amd64" -o ~/.docker/cli-plugins/docker-buildx
+    
+          # Make it executable
+          chmod +x ~/.docker/cli-plugins/docker-buildx
+    
+          # Create and use a new builder instance
+          docker buildx create --name mybuilder --use
+    
+          # Inspect to verify it's working
+          docker buildx inspect --bootstrap
+
+    - name: Login to DockerHub
+      run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
 #     - name: Install SSH Key
 #       uses: webfactory/ssh-agent@v0.5.3
 #       with:
 #         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-#     - name: Deploy Docker image to EC2
-#       run: |
-#         ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_INSTANCE_IP }} << 'EOF'
-#         docker pull kangnasir/clock-app:latest
-#         docker stop $(docker ps -a -q) || true
-#         docker run -d -p 5000:5000 kangnasir/clock-app:latest
-#         EOF
+      - name: Install SSH Key
+        run: |
+          # Create SSH directory if it doesn't exist
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          
+          # Write the private key to a file
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          
+          # Start the ssh-agent in the background
+          eval "$(ssh-agent -s)"
+          
+          # Add the key to the ssh-agent
+          ssh-add ~/.ssh/id_rsa
+          
+          # Optionally, add known hosts to avoid prompts (replace with your actual host)
+          # ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
+          # chmod 644 ~/.ssh/known_hosts
+
+    - name: Deploy Docker image to EC2
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_INSTANCE_IP }} << 'EOF'
+        docker pull kangnasir/clock-app:latest
+        docker stop $(docker ps -a -q) || true
+        docker run -d -p 5000:5000 kangnasir/clock-app:latest
+        EOF
