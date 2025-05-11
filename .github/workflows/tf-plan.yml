@@ -2,19 +2,19 @@ name: 'Terraform Plan'
 
 on:
   push:
-    branches: [ '**' ]  # Triggered on push to any branch
+    branches: [ '**' ] 
     paths:
-      - 'terraform/services/**.tf'  # Any Terraform file in any subdirectory
+      - 'terraform/services/**.tf' 
       - 'terraform/services/**.tfvars'  # Any Terraform state file in any subdirectory
       - '.github/workflows/plan.yml'
-  pull_request:
-    branches:
-      - '**'
-    paths:
-      - 'terraform/services/**.tf'  # Any Terraform file in any subdirectory
-      - 'terraform/services/**.tfvars'  # Any Terraform state file in any subdirectory
-      - '.github/workflows/plan.yml'
-    types: [opened, synchronize, reopened]
+  # pull_request:
+  #   branches:
+  #     - '**'
+  #   paths:
+  #     - 'terraform/services/**.tf'  # Any Terraform file in any subdirectory
+  #     - 'terraform/services/**.tfvars'  # Any Terraform state file in any subdirectory
+  #     - '.github/workflows/plan.yml'
+  #   types: [opened, synchronize, reopened]
 
 env:
   TF_VERSION: '1.5.7'  # Specify Terraform version
@@ -94,12 +94,36 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
+      # - name: Configure AWS Credentials
+      #   uses: aws-actions/configure-aws-credentials@v1
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: ${{ env.AWS_REGION }}
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+        run: |
+          # Install AWS CLI if not already available
+          sudo apt-get update && sudo apt-get install -y awscli
+    
+          # Configure AWS credentials
+          mkdir -p ~/.aws
+    
+    # Create credentials file
+    cat > ~/.aws/credentials << EOF
+    [default]
+    aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}
+    aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    EOF
+    
+    # Create config file with region
+    cat > ~/.aws/config << EOF
+    [default]
+    region=${{ env.AWS_REGION }}
+    output=json
+    EOF
+    
+    # Verify credentials are working (optional)
+    aws sts get-caller-identity
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2

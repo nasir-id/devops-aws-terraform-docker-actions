@@ -26,12 +26,6 @@ jobs:
     - name: Login to DockerHub
       run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
-    # - name: Build and push Docker image
-    #   run: |
-    #     docker build -t clock-app .
-    #     docker tag clock-app kangnasir/clock-app:latest
-    #     docker push kangnasir/clock-app:latest
-
     - name: Install SSH Key
       uses: webfactory/ssh-agent@v0.5.3
       with:
