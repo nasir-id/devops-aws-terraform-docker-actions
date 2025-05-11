@@ -7,10 +7,10 @@ on:
     paths:
       - 'terraform/services/**.tf'  # Any Terraform file in the services directory
       - 'terraform/services/**.tfvars'  # Any Terraform vars file in the services directory
-      - '.github/workflows/apply.yml'
+      - '.github/workflows/**.yml'
 
 env:
-  TF_VERSION: '1.5.7'  # Specify Terraform version
+  TF_VERSION: '1.11.4'  # Specify Terraform version
   AWS_REGION: 'ap-southeast-1'  # Update with your AWS region
 
 jobs:
@@ -57,17 +57,65 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+      # - name: Configure AWS CLI
+      #   uses: aws-actions/configure-aws-credentials@v1
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure AWS CLI
+        run: |
+          # Install AWS CLI if not already available
+          url https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip \
+          && unzip awscliv2.zip \
+          && ./aws/install \
+          && rm -rf aws awscliv2.zip
+    
+          # Configure AWS credentials
+          mkdir -p ~/.aws
+    
+          # Create credentials file
+          cat > ~/.aws/credentials << EOF
+          [default]
+          aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          EOF
+    
+          # Create config file with region
+          cat > ~/.aws/config << EOF
+          [default]
+          region=${{ env.AWS_REGION }}
+          output=json
+          EOF
+    
+          # Verify credentials are working (optional)
+          aws sts get-caller-identity      
+
+      # - name: Setup Terraform
+      #   uses: hashicorp/setup-terraform@v2
+      #   with:
+      #     terraform_version: ${{ env.TF_VERSION }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
+        
+        run: |
+          # Install Terraform if not already available
+          wget -O- https://apt.releases.hashicorp.com/gpg | \
+          gpg --dearmor | \
+          sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+          https://apt.releases.hashicorp.com $(lsb_release -cs) main" | \
+          sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo apt update
+          sudo apt-get install terraform
+    
+          # Verify Terraform installation
+          terraform version
+
+      - name: Terraform Init
+        working-directory: ${{ matrix.directory }}
+        run: terraform init      
 
       - name: Terraform Init
         working-directory: ${{ matrix.directory }}
