@@ -6,7 +6,7 @@ on:
     paths:
       - 'terraform/services/**.tf' 
       - 'terraform/services/**.tfvars'  # Any Terraform state file in any subdirectory
-      - '.github/workflows/**.yml'
+      - '.github/workflows/tf-plan.yml'
   # pull_request:
   #   branches:
   #     - '**'
