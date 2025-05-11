@@ -7,10 +7,9 @@ on:
     paths:
       - 'app/**'
   pull_request:
-    branches: [ main ]
+    branches: [ '**' ]
     paths:
       - 'app/**'
-  Enable manual trigger from GitHub Actions tab
   workflow_dispatch:
 
 jobs:
