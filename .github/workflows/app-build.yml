@@ -49,18 +49,28 @@ jobs:
       #   with:
       #     username: ${{ secrets.DOCKERHUB_USERNAME }}
       #     password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Login to Docker Hub
-        run: |
-          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin      
+      # - name: Login to Docker Hub
+      #   run: |
+      #     echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin      
       
       - name: Extract metadata for Docker
         id: meta
-        uses: docker/metadata-action@v4
-        with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/clock-app
-          tags: |
-            type=raw,value=latest
-            type=sha,format=short
+        run: |
+          # Set environment variables for later use
+          echo "IMAGE_NAME=${{ secrets.DOCKERHUB_USERNAME }}/clock-app" >> $GITHUB_ENV
+          
+          # Create the latest tag
+          echo "DOCKER_LATEST_TAG=${{ secrets.DOCKERHUB_USERNAME }}/clock-app:latest" >> $GITHUB_ENV
+          
+          # Create the SHA tag (short commit SHA)
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          echo "DOCKER_SHA_TAG=${{ secrets.DOCKERHUB_USERNAME }}/clock-app:$SHORT_SHA" >> $GITHUB_ENV
+          
+          # Create a combined tags string for use with docker build
+          echo "TAGS=${{ secrets.DOCKERHUB_USERNAME }}/clock-app:latest,${{ secrets.DOCKERHUB_USERNAME }}/clock-app:$SHORT_SHA" >> $GITHUB_ENV
+          
+          # Set outputs similar to the original action
+          echo "tags=${{ secrets.DOCKERHUB_USERNAME }}/clock-app:latest,${{ secrets.DOCKERHUB_USERNAME }}/clock-app:$SHORT_SHA" >> $GITHUB_OUTPUT
       
       - name: Build and push
         uses: docker/build-push-action@v4
