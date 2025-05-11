@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Build and Deploy
 
 on:
   push:
@@ -19,9 +19,6 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v3
-      
-      # - name: Set up Docker Buildx
-      #   uses: docker/setup-buildx-action@v2
 
       - name: Set up Docker Buildx
         run: |
@@ -43,12 +40,6 @@ jobs:
     
           # Inspect to verify it's working
           docker buildx inspect --bootstrap
-      
-      # - name: Login to Docker Hub
-      #   uses: docker/login-action@v2
-      #   with:
-      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
-      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
       
       - name: Login to Docker Hub
         run: |
@@ -72,19 +63,8 @@ jobs:
           
           # Set outputs similar to the original action
           echo "tags=${{ secrets.DOCKERHUB_USERNAME }}/clock-app:latest,${{ secrets.DOCKERHUB_USERNAME }}/clock-app:$SHORT_SHA" >> $GITHUB_OUTPUT
-      
-      # - name: Build and push
-      #   uses: docker/build-push-action@v4
-      #   with:
-      #     context: ./app
-      #     file: ./app/Dockerfile
-      #     push: true
-      #     tags: ${{ steps.meta.outputs.tags }}
-      #     labels: ${{ steps.meta.outputs.labels }}
-      #     cache-from: type=gha
-      #     cache-to: type=gha,mode=max
 
-      - name: Build and push
+      - name: Build and push to Docker Hub
         run: |
           # Set up BuildKit for better performance (similar to the GitHub action)
           export DOCKER_BUILDKIT=1
@@ -120,3 +100,11 @@ jobs:
             echo "Pushing: $tag"
             docker push $tag
           done
+
+    - name: Deploy Application to EC2
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_INSTANCE_IP }} << 'EOF'
+        docker pull kangnasir/clock-app:latest
+        docker stop $(docker ps -a -q) || true
+        docker run -d -p 5000:5000 kangnasir/clock-app:latest
+        EOF
