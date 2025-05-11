@@ -72,13 +72,50 @@ jobs:
           # Set outputs similar to the original action
           echo "tags=${{ secrets.DOCKERHUB_USERNAME }}/clock-app:latest,${{ secrets.DOCKERHUB_USERNAME }}/clock-app:$SHORT_SHA" >> $GITHUB_OUTPUT
       
+      # - name: Build and push
+      #   uses: docker/build-push-action@v4
+      #   with:
+      #     context: ./app
+      #     file: ./app/Dockerfile
+      #     push: true
+      #     tags: ${{ steps.meta.outputs.tags }}
+      #     labels: ${{ steps.meta.outputs.labels }}
+      #     cache-from: type=gha
+      #     cache-to: type=gha,mode=max
+
       - name: Build and push
-        uses: docker/build-push-action@v4
-        with:
-          context: ./app
-          file: ./app/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+        run: |
+          # Set up BuildKit for better performance (similar to the GitHub action)
+          export DOCKER_BUILDKIT=1
+          
+          # Extract the tags from previous step
+          IFS=',' read -ra TAG_ARRAY <<< "${{ steps.meta.outputs.tags }}"
+          
+          # Build the base command
+          BUILD_CMD="docker build ./app -f ./app/Dockerfile"
+          
+          # Add all tags
+          for tag in "${TAG_ARRAY[@]}"; do
+            BUILD_CMD="$BUILD_CMD -t $tag"
+          done
+          
+          # Add any labels that might be present
+          if [ -n "${{ steps.meta.outputs.labels }}" ]; then
+            IFS=',' read -ra LABEL_ARRAY <<< "${{ steps.meta.outputs.labels }}"
+            for label in "${LABEL_ARRAY[@]}"; do
+              BUILD_CMD="$BUILD_CMD --label $label"
+            done
+          fi
+          
+          # Note: GitHub Actions cache can't be directly replicated with standard Docker commands
+          # You might want to consider Docker's native buildx cache or a registry cache instead
+          
+          # Execute the build
+          echo "Executing: $BUILD_CMD"
+          eval $BUILD_CMD
+          
+          # Push all tags to Docker Hub
+          for tag in "${TAG_ARRAY[@]}"; do
+            echo "Pushing: $tag"
+            docker push $tag
+          done
