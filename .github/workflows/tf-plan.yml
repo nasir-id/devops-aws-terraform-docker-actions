@@ -108,22 +108,22 @@ jobs:
           # Configure AWS credentials
           mkdir -p ~/.aws
     
-    # Create credentials file
-    cat > ~/.aws/credentials << EOF
-    [default]
-    aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}
-    aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    EOF
+          # Create credentials file
+          cat > ~/.aws/credentials << EOF
+          [default]
+          aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          EOF
     
-    # Create config file with region
-    cat > ~/.aws/config << EOF
-    [default]
-    region=${{ env.AWS_REGION }}
-    output=json
-    EOF
+          # Create config file with region
+          cat > ~/.aws/config << EOF
+          [default]
+          region=${{ env.AWS_REGION }}
+          output=json
+          EOF
     
-    # Verify credentials are working (optional)
-    aws sts get-caller-identity
+          # Verify credentials are working (optional)
+          aws sts get-caller-identity
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
