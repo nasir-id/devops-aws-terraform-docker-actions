@@ -138,7 +138,7 @@ jobs:
           # Install Terraform if not already available
           url https://releases.hashicorp.com/terraform/${{ env.TF_VERSION }}/terraform_${{ env.TF_VERSION }}_linux_amd64.zip -o terraform.zip \
           && unzip terraform.zip \
-          && sudo mv terraform /usr/local/bin/ \
+          && sudo mv terraform /usr/bin/ \
           && rm terraform.zip
     
           # Verify Terraform installation

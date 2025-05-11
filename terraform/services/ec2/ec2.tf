@@ -17,4 +17,3 @@ resource "aws_instance" "webapp_server" {
 
 
 
-
