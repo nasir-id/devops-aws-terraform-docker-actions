@@ -17,4 +17,3 @@ EXPOSE 5000
 
 # Run using gunicorn for production
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
-
